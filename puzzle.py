@@ -4,6 +4,7 @@ This is the module that contains objects for the puzzle
 
 # from collections import Counter
 from typing import Union, List, Tuple
+import random
 
 
 Shape = int
@@ -114,7 +115,7 @@ class Board:
         """
         for d, i in di_list:
             match mode:
-                case '+':  # todo: if other false but this true must cancel addition
+                case '+':
                     self.oblique[d][i] += 1
                 case '-':
                     self.oblique[d][i] -= 1
@@ -173,10 +174,8 @@ class Board:
         if cell.shape == SQUARE or cell.shape == CIRCLE:
             if self.straight[VERTICAL][cell.col] + 1 > self.straight_clues[VERTICAL][cell.col]:
                 return False
-            self.straight[VERTICAL][cell.col] += 1
             if self.straight[HORIZONTAL][cell.row] + 1 > self.straight_clues[HORIZONTAL][cell.row]:
                 return False
-            self.straight[HORIZONTAL][cell.row] += 1
 
         if cell.shape == DIAMOND or cell.shape == CIRCLE:
             result_oblique = True
@@ -189,6 +188,10 @@ class Board:
                     return False
             self.modify_oblique_clue(di_list=obliques_list, mode='+')
 
+        # If valid, add to edge numbers
+        if cell.shape == SQUARE or cell.shape == CIRCLE:
+            self.straight[VERTICAL][cell.col] += 1
+            self.straight[HORIZONTAL][cell.row] += 1
         return True
 
     def place_shape(self, cell: Cell):
@@ -205,8 +208,8 @@ class Board:
 class Solver(Board):
     """Solver"""
 
-    def __init__(self, counter: dict, straight_clues, oblique_clues):
-        super().__init__(counter, straight_clues, oblique_clues)
+    def __init__(self, counter: dict, straight_clues, oblique_clues, size=3):
+        super().__init__(counter, straight_clues, oblique_clues, size)
         self.solutions: List = []
         self.moves: List[Cell] = []
 
@@ -215,24 +218,35 @@ class Solver(Board):
 
     def backtrack(self) -> None:  # todo: smth wrong here
         """backtrack"""
-        last_cell = self.moves.pop() if len(self.moves) else None
+        last_cell: Cell | None = self.moves.pop() if len(self.moves) else None
         if last_cell is None:
+            print('Backtracked all the way to beginning. No more solutions.')
             raise ValueError('Backtracked all the way to beginning. No more solutions.')
         self.counter[last_cell.shape] += 1
+        print(f'Popped last cell is: {last_cell} at ({last_cell.row}, {last_cell.col}), now board:')
 
         # Subtract edge numbers
-        self.straight[VERTICAL][last_cell.col] -= 1
-        self.straight[HORIZONTAL][last_cell.row] -= 1
-        obliques_list: List[Tuple] = self.find_cell_obliques(cell=last_cell)
-        self.modify_oblique_clue(di_list=obliques_list, mode='-')
+        if last_cell.shape == SQUARE or last_cell.shape == CIRCLE:
+            self.straight[VERTICAL][last_cell.col] -= 1
+            self.straight[HORIZONTAL][last_cell.row] -= 1
+        if last_cell.shape == DIAMOND or last_cell.shape == CIRCLE:
+            obliques_list: List[Tuple] = self.find_cell_obliques(cell=last_cell)
+            self.modify_oblique_clue(di_list=obliques_list, mode='-')
+
+        # Set last cell shape to EMPTY
+        tmp = self.grid[last_cell.row][last_cell.col].shape
+        self.grid[last_cell.row][last_cell.col].shape = EMPTY
+        print(self)
+        self.grid[last_cell.row][last_cell.col].shape = tmp
 
         # Try placing a shape
-        # placed = False
         while True:
             if last_cell.shape in SHAPES[1:-1] and self.counter[last_cell.shape+1]:
                 last_cell.shape += 1
                 placed = self.place_shape(cell=last_cell)
                 if placed:
+                    self.moves.append(last_cell)
+                    print(f'Backtracked and Placed move {len(self.moves)}: {last_cell.shape}\n{self}\n')
                     break
                 else:
                     continue
@@ -240,6 +254,8 @@ class Solver(Board):
                 last_cell.shape += 2
                 placed = self.place_shape(cell=last_cell)
                 if placed:
+                    self.moves.append(last_cell)
+                    print(f'Backtracked and Placed move {len(self.moves)}: {last_cell.shape}\n{self}\n')
                     break
                 else:
                     continue
@@ -247,6 +263,7 @@ class Solver(Board):
             #     self.backtrack()
             #     break
             else:
+                last_cell.shape = EMPTY
                 self.backtrack()
                 break
                 # print(f'cell shape is {last_cell.shape}')
@@ -271,8 +288,8 @@ class Solver(Board):
                         cell.shape = s
                         placed = self.place_shape(cell=cell)
                         if placed:
-                            print(f'Placed move {len(self.moves)}:\n{self}\n')
                             self.moves.append(cell)
+                            print(f'Placed move {len(self.moves)}: {cell.shape}\n{self}\n')
                             break
                 if not placed:
                     self.backtrack()
@@ -295,5 +312,27 @@ class Solver(Board):
         return len(self.solutions)
 
 
-class Generator(Board):
+class Generator():  # todo
     """Generator"""
+    def __init__(self, size=3):
+        self.size = size
+
+    def generate_seq(self):
+        """
+        >>> g = Generator()
+        >>> s = g.generate_seq()
+        >>> len(s) == g.size*g.size
+        True
+        """
+        return random.choices(population=range(1, 4), weights=[0.35, 0.35, 0.3], k=self.size*self.size)
+
+    def generate_grid(self):
+        """
+        >>> g = Generator()
+        >>> gr = g.generate_grid()
+        >>> len(gr) == g.size and len(gr[0]) == g.size
+        True
+        """
+        seq = self.generate_seq()
+        return [seq[i:i+self.size] for i in range(0, len(seq), self.size)]
+

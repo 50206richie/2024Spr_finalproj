@@ -27,17 +27,43 @@ if __name__ == '__main__':
 
         elif game_mode == solve:
             puzzles_data = {
-                '3x3': {'size': 3,
-                        'counter': {puzzle.SQUARE: 3, puzzle.DIAMOND: 3, puzzle.CIRCLE: 3},
+                # '3x3': {'size': 3,
+                #         'counter': {puzzle.SQUARE: 3, puzzle.DIAMOND: 3, puzzle.CIRCLE: 3},
+                #         'clue_s': {
+                #             puzzle.VERTICAL: [3, 2, 1],
+                #             puzzle.HORIZONTAL: [3, 1, 2]
+                #         },
+                #         'clue_o': {
+                #             puzzle.N: [3, 3, 1],
+                #             puzzle.E: [2, 1, 3],
+                #             puzzle.S: [3, 1, 2],
+                #             puzzle.W: [2, 2, 1]
+                #         },
+                # },
+                # '3x3': {'size': 3,
+                #         'counter': {puzzle.SQUARE: 5, puzzle.DIAMOND: 2, puzzle.CIRCLE: 2},
+                #         'clue_s': {
+                #             puzzle.VERTICAL: [3, 2, 2],
+                #             puzzle.HORIZONTAL: [2, 2, 3]
+                #         },
+                #         'clue_o': {
+                #             puzzle.N: [2, 1, 1],
+                #             puzzle.E: [2, 2, 0],
+                #             puzzle.S: [3, 1, 1],
+                #             puzzle.W: [2, 0, 2]
+                #         },
+                # },
+                '4x4': {'size': 4,
+                        'counter': {puzzle.SQUARE: 6, puzzle.DIAMOND: 6, puzzle.CIRCLE: 4},
                         'clue_s': {
-                            puzzle.VERTICAL: [3, 2, 1],
-                            puzzle.HORIZONTAL: [3, 1, 2]
+                            puzzle.VERTICAL: [2, 3, 2, 3],
+                            puzzle.HORIZONTAL: [2, 3, 2, 3]
                         },
                         'clue_o': {
-                            puzzle.N: [3, 3, 1],
-                            puzzle.E: [2, 1, 2],
-                            puzzle.S: [3, 1, 2],
-                            puzzle.W: [2, 2, 1]
+                            puzzle.N: [2, 3, 4, 1],
+                            puzzle.E: [3, 2, 3, 2],
+                            puzzle.S: [2, 3, 1, 3],
+                            puzzle.W: [3, 2, 2, 4]
                         },
                 }
             }
@@ -46,7 +72,8 @@ if __name__ == '__main__':
                 time_before = process_time_ns()
                 ps = puzzle.Solver(counter=data['counter'],
                                    straight_clues=[data['clue_s'][k] for k in data['clue_s']],
-                                   oblique_clues=[data['clue_o'][k] for k in data['clue_o']])
+                                   oblique_clues=[data['clue_o'][k] for k in data['clue_o']],
+                                   size=data['size'])
 
                 print('\n\nsolving puzzle "{}"'.format(name))
                 print(ps)
