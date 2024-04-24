@@ -2,14 +2,15 @@
 This is the module that contains objects for the puzzle
 """
 
-# from collections import Counter
+from collections import Counter
 from typing import Union, List, Tuple
 import random
 
 
 Shape = int
 SHAPES = [EMPTY, SQUARE, DIAMOND, CIRCLE] = range(4)
-SHAPE_SYMBOL = ['_', '◼', '◆', '⬤']  # https://www.alt-codes.net/
+# SHAPE_SYMBOL = ['_', '◼', '⬥◆◆', '⬤']  # https://www.alt-codes.net/
+SHAPE_SYMBOL = ['_', 'S', 'D', 'C']  # https://www.alt-codes.net/
 STRAIGHTS = [VERTICAL, HORIZONTAL] = range(2)
 DIRECTIONS = [N, E, S, W] = range(4)  # Used in determine oblique clue directions
 # OBLIQUES = [NW, NE, SE, SW] = range(4, 8)  # heading direction (from cell)
@@ -49,7 +50,7 @@ class Board:
     0000000
     <BLANKLINE>
     """
-    def __init__(self, counter: dict, straight_clues, oblique_clues, size=3):
+    def __init__(self, counter: dict | None, straight_clues, oblique_clues, size=3):
         self.size = size
         self.grid = [[Cell(row=row, col=col, shape=EMPTY) for col in range(size)] for row in range(size)]
         self.counter = counter
@@ -57,8 +58,13 @@ class Board:
         self.oblique = [[0 for _ in range(size)] for _ in range(4)]
         self.straight_clues = straight_clues
         self.oblique_clues = oblique_clues
-        if self.straight_clues is None or self.oblique_clues is None:
-            raise ValueError('No clues given')
+        if self.counter is None and self.straight_clues is None and self.oblique_clues is None:
+            # Generation
+            self.counter = {SQUARE: 0, DIAMOND: 0, CIRCLE: 0}
+            self.straight_clues = [[0 for _ in range(size)] for _ in range(2)]
+            self.oblique_clues = [[0 for _ in range(size)] for _ in range(4)]
+        # elif self.counter or self.straight_clues is None or self.oblique_clues is None:
+        #     raise ValueError('Clues Missing')
         """
         oblique is the diagonals which separated into 4 sides
         xxxo
@@ -74,22 +80,22 @@ class Board:
                         f'Circle: {self.counter[CIRCLE]}\n')
         grid_str = ''
         for i in range(self.size):
-            grid_str += f'{self.oblique_clues[N][i]}{self.straight_clues[VERTICAL][i]}'
+            grid_str += f'{self.oblique_clues[N][i]} {self.straight_clues[VERTICAL][i]} '
         grid_str += f'{self.oblique_clues[E][0]}\n'
         for i in range(self.size):
-            grid_str += f'{self.straight_clues[HORIZONTAL][i]}'
+            grid_str += f'{self.straight_clues[HORIZONTAL][i]} '
             for j in range(self.size):
                 if j < self.size-1:
-                    grid_str += f'{self.grid[i][j]} '
+                    grid_str += f'{self.grid[i][j]}   '
                 else:
                     grid_str += f'{self.grid[i][j]}'
-            grid_str += f'{self.straight_clues[HORIZONTAL][i]}\n'
+            grid_str += f' {self.straight_clues[HORIZONTAL][i]}\n'
             if i < self.size-1:
                 grid_str += (f'{self.oblique_clues[W][(self.size-1)-i]}'
-                             f'{" "*(self.size*2-1)}{self.oblique_clues[E][i+1]}\n')
+                             f'{" "*((self.size*2-1)*2+1)}{self.oblique_clues[E][i+1]}\n')
         grid_str += f'{self.oblique_clues[W][0]}'
         for i in range(self.size):
-            grid_str += f'{self.straight_clues[VERTICAL][i]}{self.oblique_clues[S][(self.size-1)-i]}'
+            grid_str += f' {self.straight_clues[VERTICAL][i]} {self.oblique_clues[S][(self.size-1)-i]}'
         board_str = header + shape_counts + grid_str + '\n'
         return board_str
 
@@ -166,7 +172,7 @@ class Board:
         return obliques
 
     def is_valid_puzzle(self, cell: Cell) -> bool:
-        """DONE
+        """
         Let shape radiate to the edge to add, if invalid, subtract and return False
         :param cell:
         :return:
@@ -216,14 +222,14 @@ class Solver(Board):
     def __str__(self):
         return super().__str__()
 
-    def backtrack(self) -> None:  # todo: smth wrong here
+    def backtrack(self) -> None:
         """backtrack"""
         last_cell: Cell | None = self.moves.pop() if len(self.moves) else None
         if last_cell is None:
             print('Backtracked all the way to beginning. No more solutions.')
             raise ValueError('Backtracked all the way to beginning. No more solutions.')
         self.counter[last_cell.shape] += 1
-        print(f'Popped last cell is: {last_cell} at ({last_cell.row}, {last_cell.col}), now board:')
+        # print(f'Popped last cell is: {last_cell} at ({last_cell.row}, {last_cell.col}), now board:')
 
         # Subtract edge numbers
         if last_cell.shape == SQUARE or last_cell.shape == CIRCLE:
@@ -236,7 +242,7 @@ class Solver(Board):
         # Set last cell shape to EMPTY
         tmp = self.grid[last_cell.row][last_cell.col].shape
         self.grid[last_cell.row][last_cell.col].shape = EMPTY
-        print(self)
+        # print(self)
         self.grid[last_cell.row][last_cell.col].shape = tmp
 
         # Try placing a shape
@@ -246,7 +252,7 @@ class Solver(Board):
                 placed = self.place_shape(cell=last_cell)
                 if placed:
                     self.moves.append(last_cell)
-                    print(f'Backtracked and Placed move {len(self.moves)}: {last_cell.shape}\n{self}\n')
+                    # print(f'Backtracked and Placed move {len(self.moves)}: {last_cell.shape}\n{self}\n')
                     break
                 else:
                     continue
@@ -255,7 +261,7 @@ class Solver(Board):
                 placed = self.place_shape(cell=last_cell)
                 if placed:
                     self.moves.append(last_cell)
-                    print(f'Backtracked and Placed move {len(self.moves)}: {last_cell.shape}\n{self}\n')
+                    # print(f'Backtracked and Placed move {len(self.moves)}: {last_cell.shape}\n{self}\n')
                     break
                 else:
                     continue
@@ -283,13 +289,13 @@ class Solver(Board):
                     break
 
                 placed = False
-                for s in SHAPES[1:]:
+                for s in SHAPES[SQUARE:]:
                     if self.counter[s]:
                         cell.shape = s
                         placed = self.place_shape(cell=cell)
                         if placed:
                             self.moves.append(cell)
-                            print(f'Placed move {len(self.moves)}: {cell.shape}\n{self}\n')
+                            # print(f'Placed move {len(self.moves)}: {cell.shape}\n{self}\n')
                             break
                 if not placed:
                     self.backtrack()
@@ -312,27 +318,83 @@ class Solver(Board):
         return len(self.solutions)
 
 
-class Generator():  # todo
+class Generator(Solver):
     """Generator"""
-    def __init__(self, size=3):
-        self.size = size
+    def __init__(self, counter=None, straight_clues=None, oblique_clues=None, size=3):
+        super().__init__(counter, straight_clues, oblique_clues, size)
+        self.answer_grid = None
 
-    def generate_seq(self):
+    def generate_seq(self) -> list[int]:
         """
         >>> g = Generator()
         >>> s = g.generate_seq()
         >>> len(s) == g.size*g.size
         True
         """
+        # todo: change weights for different difficulties
         return random.choices(population=range(1, 4), weights=[0.35, 0.35, 0.3], k=self.size*self.size)
 
-    def generate_grid(self):
-        """
+    def generate_shape_counter(self, seq: list):
+        """As title
         >>> g = Generator()
-        >>> gr = g.generate_grid()
-        >>> len(gr) == g.size and len(gr[0]) == g.size
+        >>> g.generate_shape_counter([3, 3, 2, 1, 2, 2, 3, 3, 3])
+        >>> g.counter == {CIRCLE: 5, DIAMOND: 3, SQUARE: 1}
         True
         """
-        seq = self.generate_seq()
-        return [seq[i:i+self.size] for i in range(0, len(seq), self.size)]
+        self.counter = dict(Counter(seq))
 
+    def generate_grid_and_counter(self):
+        """
+        As title
+        """
+        seq = self.generate_seq()
+        # seq = [1, 2, 2, 2, 1, 3, 3, 3, 3]
+        self.generate_shape_counter(seq=seq)
+        for r in range(self.size):
+            for c in range(self.size):
+                self.grid[r][c].shape = seq[r*self.size + c]
+
+    def generate_clues(self):
+        """Counts the total number of shapes of the clue number position"""
+        for r in range(self.size):
+            for c in range(self.size):
+                if self.grid[r][c].shape == SQUARE or self.grid[r][c].shape == CIRCLE:
+                    self.straight_clues[VERTICAL][c] += 1
+                    self.straight_clues[HORIZONTAL][r] += 1
+
+                if self.grid[r][c].shape == DIAMOND or self.grid[r][c].shape == CIRCLE:
+                    obliques_list: List[Tuple] = self.find_cell_obliques(cell=self.grid[r][c])
+                    # print(f'oblique_list is {obliques_list}')
+                    for d, i in obliques_list:
+                        self.oblique_clues[d][i] += 1
+
+    def generate_board(self) -> bool:
+        """As title"""
+        self.generate_grid_and_counter()
+        # initalize grid clues
+        self.generate_clues()
+        # Find Solutions
+        answer = self.__str__()
+        self.answer_grid = self.grid.copy()
+        for r in range(self.size):
+            for c in range(self.size):
+                self.grid[r][c].shape = EMPTY
+        print(self.answer_grid)
+        print(f'Generated grid:\n{self}Answer should be:\n{answer}Finding solutions...')
+        solutions = self.find_solutions()
+        print(f'Found {solutions} solutions')
+        return True if solutions == 1 else False
+
+
+def generate_valid_board(size=3):
+    """Generates a valid board"""
+    while True:
+        generator = Generator(size=size)
+        generated: bool = generator.generate_board()
+        if generated:
+            print(f'Generated valid puzzle:\n{generator}')
+            return
+
+
+if __name__ == '__main__':
+    generate_valid_board(size=5)
