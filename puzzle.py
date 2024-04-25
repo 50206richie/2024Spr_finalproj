@@ -1,22 +1,26 @@
 """
 This is the module that contains objects for the puzzle
 """
-
+import os
 from collections import Counter
 from typing import Union, List, Tuple
 import random
-
+import json
 
 Shape = int
 SHAPES = [EMPTY, SQUARE, DIAMOND, CIRCLE] = range(4)
-# SHAPE_SYMBOL = ['_', '◼', '⬥◆◆', '⬤']  # https://www.alt-codes.net/
-SHAPE_SYMBOL = ['_', 'S', 'D', 'C']  # https://www.alt-codes.net/
+# SHAP = [■⬩⬥, SQUARE, DIAMOND, CIRCLE] = range(4)
+SHAPE_SYMBOL = ['_', '▪', '⬩', '●']  # https://www.alt-codes.net/
+# SHAPE_SYMBOL = ['_', 'S', 'D', 'C']
 STRAIGHTS = [VERTICAL, HORIZONTAL] = range(2)
 DIRECTIONS = [N, E, S, W] = range(4)  # Used in determine oblique clue directions
+
+
 # OBLIQUES = [NW, NE, SE, SW] = range(4, 8)  # heading direction (from cell)
 
 
 def get_shape_str(shape: Shape) -> str:
+    """Returns the symbol of the shape"""
     return SHAPE_SYMBOL[shape]
 
 
@@ -26,6 +30,7 @@ class Cell:
     >>> print(f'{c}')
     ◼
     """
+
     def __init__(self, row=None, col=None, shape=EMPTY):
         self.row = row
         self.col = col
@@ -50,6 +55,7 @@ class Board:
     0000000
     <BLANKLINE>
     """
+
     def __init__(self, counter: dict | None, straight_clues, oblique_clues, size=3):
         self.size = size
         self.grid = [[Cell(row=row, col=col, shape=EMPTY) for col in range(size)] for row in range(size)]
@@ -85,21 +91,22 @@ class Board:
         for i in range(self.size):
             grid_str += f'{self.straight_clues[HORIZONTAL][i]} '
             for j in range(self.size):
-                if j < self.size-1:
+                if j < self.size - 1:
                     grid_str += f'{self.grid[i][j]}   '
                 else:
                     grid_str += f'{self.grid[i][j]}'
             grid_str += f' {self.straight_clues[HORIZONTAL][i]}\n'
-            if i < self.size-1:
-                grid_str += (f'{self.oblique_clues[W][(self.size-1)-i]}'
-                             f'{" "*((self.size*2-1)*2+1)}{self.oblique_clues[E][i+1]}\n')
+            if i < self.size - 1:
+                grid_str += (f'{self.oblique_clues[W][(self.size - 1) - i]}'
+                             f'{" " * ((self.size * 2 - 1) * 2 + 1)}{self.oblique_clues[E][i + 1]}\n')
         grid_str += f'{self.oblique_clues[W][0]}'
         for i in range(self.size):
-            grid_str += f' {self.straight_clues[VERTICAL][i]} {self.oblique_clues[S][(self.size-1)-i]}'
+            grid_str += f' {self.straight_clues[VERTICAL][i]} {self.oblique_clues[S][(self.size - 1) - i]}'
         board_str = header + shape_counts + grid_str + '\n'
         return board_str
 
     def is_full(self) -> bool:
+        """Check if grid is full"""
         for ci in self.grid:
             for cj in ci:
                 if cj.shape == EMPTY:
@@ -107,6 +114,7 @@ class Board:
         return True
 
     def get_next_empty_cell(self) -> Union[Cell, None]:
+        """As title"""
         for ci in self.grid:
             for cj in ci:
                 if cj.shape == EMPTY:
@@ -132,7 +140,7 @@ class Board:
         rc_sum = cell.row + cell.col
         c1 = abs(rc_diff)
         c2 = self.size - c1
-        c3 = abs(rc_sum - (self.size-1))
+        c3 = abs(rc_sum - (self.size - 1))
         c4 = self.size - c3
         obliques = None
         # Antidiag is adding, Diagonal is subtracting
@@ -201,6 +209,7 @@ class Board:
         return True
 
     def place_shape(self, cell: Cell):
+        """Place a shape into the given cell"""
         self.grid[cell.row][cell.col] = cell
 
         if not self.is_valid_puzzle(cell=cell):
@@ -219,14 +228,11 @@ class Solver(Board):
         self.solutions: List = []
         self.moves: List[Cell] = []
 
-    def __str__(self):
-        return super().__str__()
-
     def backtrack(self) -> None:
         """backtrack"""
         last_cell: Cell | None = self.moves.pop() if len(self.moves) else None
         if last_cell is None:
-            print('Backtracked all the way to beginning. No more solutions.')
+            # print('Backtracked all the way to beginning. No more solutions.')
             raise ValueError('Backtracked all the way to beginning. No more solutions.')
         self.counter[last_cell.shape] += 1
         # print(f'Popped last cell is: {last_cell} at ({last_cell.row}, {last_cell.col}), now board:')
@@ -247,7 +253,7 @@ class Solver(Board):
 
         # Try placing a shape
         while True:
-            if last_cell.shape in SHAPES[1:-1] and self.counter[last_cell.shape+1]:
+            if last_cell.shape in SHAPES[1:-1] and self.counter[last_cell.shape + 1]:
                 last_cell.shape += 1
                 placed = self.place_shape(cell=last_cell)
                 if placed:
@@ -256,7 +262,7 @@ class Solver(Board):
                     break
                 else:
                     continue
-            elif last_cell.shape in SHAPES[1:-2] and self.counter[last_cell.shape+2]:  # Square to Circle
+            elif last_cell.shape in SHAPES[1:-2] and self.counter[last_cell.shape + 2]:  # Square to Circle
                 last_cell.shape += 2
                 placed = self.place_shape(cell=last_cell)
                 if placed:
@@ -265,15 +271,10 @@ class Solver(Board):
                     break
                 else:
                     continue
-            # elif last_cell.shape == SHAPES[-1]:
-            #     self.backtrack()
-            #     break
             else:
                 last_cell.shape = EMPTY
                 self.backtrack()
                 break
-                # print(f'cell shape is {last_cell.shape}')
-                # raise ValueError('Last cell shape???')  #  error has led to here once
         return
 
     def find_solutions(self) -> int:
@@ -304,7 +305,7 @@ class Solver(Board):
                     # Solved
                     solution = str(self)
                     self.solutions.append(solution)
-                    print(f'\nGOT SOLUTION #{len(self.solutions)}:\n {solution}')
+                    # print(f'\nGOT SOLUTION #{len(self.solutions)}:\n {solution}')
                     if len(self.solutions) > 1:
                         # Multiple Solutions
                         break
@@ -320,9 +321,10 @@ class Solver(Board):
 
 class Generator(Solver):
     """Generator"""
+
     def __init__(self, counter=None, straight_clues=None, oblique_clues=None, size=3):
         super().__init__(counter, straight_clues, oblique_clues, size)
-        self.answer_grid = None
+        self.answer_grid: list[list] = [[0 for _ in range(self.size)] for _ in range(self.size)]
 
     def generate_seq(self) -> list[int]:
         """
@@ -332,7 +334,8 @@ class Generator(Solver):
         True
         """
         # todo: change weights for different difficulties
-        return random.choices(population=range(1, 4), weights=[0.35, 0.35, 0.3], k=self.size*self.size)
+        # Ensure every shape exists
+        return random.choices(population=range(1, 4), weights=[0.35, 0.35, 0.3], k=self.size * self.size-3) + [1, 2, 3]
 
     def generate_shape_counter(self, seq: list):
         """As title
@@ -352,7 +355,8 @@ class Generator(Solver):
         self.generate_shape_counter(seq=seq)
         for r in range(self.size):
             for c in range(self.size):
-                self.grid[r][c].shape = seq[r*self.size + c]
+                self.answer_grid[r][c] = seq[r * self.size + c]
+                self.grid[r][c].shape = seq[r * self.size + c]
 
     def generate_clues(self):
         """Counts the total number of shapes of the clue number position"""
@@ -374,27 +378,76 @@ class Generator(Solver):
         # initalize grid clues
         self.generate_clues()
         # Find Solutions
-        answer = self.__str__()
-        self.answer_grid = self.grid.copy()
+        # answer = self.__str__()
         for r in range(self.size):
             for c in range(self.size):
                 self.grid[r][c].shape = EMPTY
-        print(self.answer_grid)
-        print(f'Generated grid:\n{self}Answer should be:\n{answer}Finding solutions...')
+        # for r in range(self.size):
+        #     for c in range(self.size):
+        #         print(self.answer_grid[r][c].shape)
+        # print(self.answer_grid)
+        # print(f'Generated grid:\n{self}Answer should be:\n{answer}Finding solutions...')
+        print(f'Generated grid! Finding solutions...')
         solutions = self.find_solutions()
-        print(f'Found {solutions} solutions')
+
+        if solutions != 1:
+            print(f'Have mutliple ({solutions}) solutions, regenerating new puzzle!\n')
+        else:
+            print(f'Found the only {solutions} solution!\n')
         return True if solutions == 1 else False
 
 
-def generate_valid_board(size=3):
+def generate_valid_puzzle(size=3) -> Generator:
     """Generates a valid board"""
     while True:
         generator = Generator(size=size)
         generated: bool = generator.generate_board()
         if generated:
-            print(f'Generated valid puzzle:\n{generator}')
-            return
+            return generator
+
+
+def store_board_to_json(gen_puzzle: Generator):
+    """As title"""
+    if os.path.exists('puzzle_data.json'):
+        with open('puzzle_data.json', 'r') as file:
+            data = json.load(file)
+    else:
+        data = {}
+
+    puzzle_size_str = str(gen_puzzle.size)
+    # Add new puzzle to file
+    puzzle_id = len(data[puzzle_size_str]) if puzzle_size_str in data else 0
+    new_puzzle = {
+        'id': puzzle_id,
+        'data': {
+            'size': gen_puzzle.size,
+            'counter': gen_puzzle.counter,
+            'clue_s': {
+                VERTICAL: gen_puzzle.straight_clues[VERTICAL],
+                HORIZONTAL: gen_puzzle.straight_clues[HORIZONTAL]
+            },
+            'clue_o': {
+                N: gen_puzzle.oblique_clues[N],
+                E: gen_puzzle.oblique_clues[E],
+                S: gen_puzzle.oblique_clues[S],
+                W: gen_puzzle.oblique_clues[W]
+            },
+            'answer': gen_puzzle.answer_grid
+        }
+    }
+    if puzzle_size_str not in data:
+        data[puzzle_size_str] = []
+    data[puzzle_size_str].append(new_puzzle)
+
+    # Store it back to json
+    with open('puzzle_data.json', 'w') as file:
+        json.dump(data, file, indent=4)
 
 
 if __name__ == '__main__':
-    generate_valid_board(size=5)
+    """For generating and storing new puzzles to json"""
+    generated_puzzle: Generator = generate_valid_puzzle(size=5)
+    store_board_to_json(generated_puzzle)
+    print(f'Generated valid puzzle:\n{generated_puzzle}')
+    # todo: try multithread?
+    # todo: gui
