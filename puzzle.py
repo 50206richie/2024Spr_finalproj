@@ -107,9 +107,9 @@ class Board:
 
     def is_full(self) -> bool:
         """Check if grid is full"""
-        for ci in self.grid:
-            for cj in ci:
-                if cj.shape == EMPTY:
+        for r in range(len(self.grid)-1, -1, -1):
+            for c in range(len(self.grid)-1, -1, -1):
+                if self.grid[r][c].shape == EMPTY:
                     return False
         return True
 
