@@ -28,7 +28,7 @@ class Cell:
     """Cell
     >>> c = Cell(shape=SQUARE)
     >>> print(f'{c}')
-    ◼
+    ▪
     """
 
     def __init__(self, row=None, col=None, shape=EMPTY):
@@ -179,12 +179,46 @@ class Board:
                 obliques = [(N, 0), (E, 0), (S, 0), (W, 0)]
         return obliques
 
+    def count_straight_shapes(self, vertical: bool, line: int) -> int:
+        """NOT USED Count the shapes in a straight line
+        :param vertical: True if counting in a vertical direction, else false
+        :param line: the nth line that would be counted
+        """
+        shapes = 0
+        if vertical:
+            for i in range(self.size):
+                if self.grid[i][line].shape == SQUARE or self.grid[i][line].shape == CIRCLE:
+                    shapes += 1
+        elif not vertical:
+            for i in range(self.size):
+                if self.grid[line][i].shape == SQUARE or self.grid[line][i].shape == CIRCLE:
+                    shapes += 1
+        return shapes
+
+    def check_straight_line_shapes(self, cell: Cell) -> bool:
+        """As title"""
+        cell_shape_straight: int = 0 if cell.shape == DIAMOND else 1
+        line_valid = True
+        if cell.col == self.size - 1:
+            if self.straight[HORIZONTAL][cell.row] + cell_shape_straight != self.straight_clues[HORIZONTAL][cell.row]:
+                line_valid = False
+        if cell.row == self.size - 1:
+            if self.straight[VERTICAL][cell.col] + cell_shape_straight != self.straight_clues[VERTICAL][cell.col]:
+                line_valid = False
+        return line_valid
+
     def is_valid_puzzle(self, cell: Cell) -> bool:
         """
         Let shape radiate to the edge to add, if invalid, subtract and return False
         :param cell:
         :return:
         """
+        # Check if cell is last cell in row or col, and see if clue matches
+        if cell.col == self.size - 1 or cell.row == self.size - 1:
+            clues_match: bool = self.check_straight_line_shapes(cell=cell)
+            if clues_match is False:
+                return False
+
         if cell.shape == SQUARE or cell.shape == CIRCLE:
             if self.straight[VERTICAL][cell.col] + 1 > self.straight_clues[VERTICAL][cell.col]:
                 return False
@@ -213,7 +247,7 @@ class Board:
         self.grid[cell.row][cell.col] = cell
 
         if not self.is_valid_puzzle(cell=cell):
-            self.grid[cell.row][cell.col].shape = EMPTY
+            # self.grid[cell.row][cell.col].shape = EMPTY  THIS LINE WRONG, CAUSES BACKTRACK MALFUNCTION
             return False
 
         self.counter[cell.shape] -= 1
@@ -253,21 +287,23 @@ class Solver(Board):
 
         # Try placing a shape
         while True:
-            if last_cell.shape in SHAPES[1:-1] and self.counter[last_cell.shape + 1]:
+            if last_cell.shape in SHAPES[SQUARE:-1] and self.counter[last_cell.shape + 1]:
                 last_cell.shape += 1
                 placed = self.place_shape(cell=last_cell)
                 if placed:
                     self.moves.append(last_cell)
-                    # print(f'Backtracked and Placed move {len(self.moves)}: {last_cell.shape}\n{self}\n')
+                    # if not len(self.solutions):
+                    #     print(f'Backtracked and Placed move {len(self.moves)}: {last_cell.shape}\n{self}\n')
                     break
                 else:
                     continue
-            elif last_cell.shape in SHAPES[1:-2] and self.counter[last_cell.shape + 2]:  # Square to Circle
+            elif last_cell.shape in SHAPES[SQUARE:-2] and self.counter[last_cell.shape + 2]:  # Square to Circle
                 last_cell.shape += 2
                 placed = self.place_shape(cell=last_cell)
                 if placed:
                     self.moves.append(last_cell)
-                    # print(f'Backtracked and Placed move {len(self.moves)}: {last_cell.shape}\n{self}\n')
+                    # if not len(self.solutions):
+                    #     print(f'Backtracked and Placed move {len(self.moves)}: {last_cell.shape}\n{self}\n')
                     break
                 else:
                     continue
@@ -296,16 +332,18 @@ class Solver(Board):
                         placed = self.place_shape(cell=cell)
                         if placed:
                             self.moves.append(cell)
-                            # print(f'Placed move {len(self.moves)}: {cell.shape}\n{self}\n')
+                            # if not len(self.solutions):
+                            #     print(f'Placed move {len(self.moves)}: {cell.shape}\n{self}\n')
                             break
                 if not placed:
+                    cell.shape = EMPTY
                     self.backtrack()
 
                 if self.is_full():
                     # Solved
                     solution = str(self)
                     self.solutions.append(solution)
-                    # print(f'\nGOT SOLUTION #{len(self.solutions)}:\n {solution}')
+                    print(f'\nGOT SOLUTION #{len(self.solutions)}:\n {solution}')
                     if len(self.solutions) > 1:
                         # Multiple Solutions
                         break
@@ -335,7 +373,11 @@ class Generator(Solver):
         """
         # todo: change weights for different difficulties
         # Ensure every shape exists
-        return random.choices(population=range(1, 4), weights=[0.35, 0.35, 0.3], k=self.size * self.size-3) + [1, 2, 3]
+        while True:
+            seq = random.choices(population=range(1, 4), weights=[0.35, 0.35, 0.3], k=self.size * self.size)
+            if len(Counter(seq)) == 3:
+                break
+        return seq
 
     def generate_shape_counter(self, seq: list):
         """As title
@@ -382,12 +424,8 @@ class Generator(Solver):
         for r in range(self.size):
             for c in range(self.size):
                 self.grid[r][c].shape = EMPTY
-        # for r in range(self.size):
-        #     for c in range(self.size):
-        #         print(self.answer_grid[r][c].shape)
-        # print(self.answer_grid)
-        # print(f'Generated grid:\n{self}Answer should be:\n{answer}Finding solutions...')
-        print(f'Generated grid! Finding solutions...')
+
+        print(f'Generated grid!\n{self}\n Finding solutions...')
         solutions = self.find_solutions()
 
         if solutions != 1:
