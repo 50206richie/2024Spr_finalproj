@@ -1,5 +1,5 @@
 # Straight or Skew? --- A new puzzle
-***
+
 ## Quick start
 Download ```main.py, puzzle.py, and puzzle_data.json```
 and run `main`. If you want to generate new puzzles, 
@@ -78,6 +78,7 @@ Below is an example of what a puzzle looks like:
 Comparing the solving speed of 3x3, 4x4, 5x5
 - 3x3 and 4x4 are solved immediately, while
 - 5x5 took half a minute!!
+
 ![performance0.png](img/performance0.png)
 
 More can be found in the [presentation file](doc/IS_597_DS_Project_Presentation_240425.pdf).
