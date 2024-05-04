@@ -1,31 +1,91 @@
-## 2024 Spring Finals
+# Straight or Skew? --- A new puzzle
 
-Each project from this semester is a public fork linked from this repository.  This is just one of the many assignments students worked on for the course, but this is the *only* one they are permitted to publish openly.
+## Quick start
+Download ```main.py, puzzle.py, and puzzle_data.json```
+and run `main`. If you want to generate new puzzles, 
+run `puzzle`. Puzzles generated are all stored in 
+`puzzle_data.json`. PLease refer to the 
+***
+***The content below can also be found in the [presentation file](doc/IS_597_DS_Project_Presentation_240425.pdf) in `doc`***
+## Introduction
+This is a game that I might have invented myself. 
+I was inspired by the PlayStation controller, 
+which contains different shapes of buttons, and also 
+by lots of square grid puzzles.
 
-## Final Project Expectations:
+Players play on an `NxN` grid with numbers on the sides 
+and place squares, diamonds, and circles in the cells.
+A square can be seen straight, a diamond can be seen 
+diagonally,and a circle can be seen in either direction,
+as shown in the first following picture.
+![game_intro.png](img/game_intro.png)
+Note that instead of **4n** views (n=length of the grid),
+we have **8n** views because we now have the skewed direction that ends differently than the straight ones. As shown in the third picture, the orange arrows point to black numbers, and the yellow arrows point to blue numbers.
 
-You have considerable flexibility about specifics and you will publish your project openly (as a fork from here) to allow making it part of your portfolio if you choose.  You may work alone or in a team of two students. 
+Below is an example of what a puzzle looks like:
+![puzzle_trial.png](img/puzzle_trial.png)
 
-Regardless of topic, it must involve notable amounts of original work of your own, though it can of course use existing libraries or be inspired by or built upon some other published work(s). 
+***
+## Methods
+### Data Structures
+- Counter: dictionary
+- Clues: lists in each direction
+  - Straight (2)
+  - Oblique (4)
+- Grid: 2D object list
+  - Cell: row, col, shape
+### Algorithms
+- General
+  - Is the board full?
+  - Place a shape into the grid
+  - Is the puzzle valid?
+  - Modifying the clues
+- Solving:
+  - Finding Solutions
+    - What cell should we choose to place which shape, 
+    brute force
+  - Backtracking
+    - If we did not successfully place a shape, go back and retry the last move, recursively
+- Generating:
+  - Randomly pick shapes to form an unvalidated puzzle
+    - Solve it to see if we should regenerate
 
-PLAGIARISM IS NOT ACCEPTABLE. From the first commit through all production of documentation and code, it must be crystal clear which, if any, parts of the project were based on or duplicated from any other source(s) all of which must be cited. This should be so specific that any evaluator can tell which lines of code are original work and which aren't. Same for all written narrative, documentation, images, significant algorithms, etc.
+***
+## Targeted Algorithm Analysis
+1.`def is_valid(self, Cell) -> bool:`
 
-## Project Types you may choose:
+- Checks if a placement is valid
+- Modifies the shape of a cell (as if we were putting a shape into the grid)
+- Add 1 to edge clues that are affected
+  - Square, Diamond: 4 edges
+  - Circle: 8 edges
+- **Time complexity: O(4n) or O(8n) ~ O(n); n = size of the grid**
 
-(Making original _variations_ of puzzles and games isn't as difficult as it may seem -- we have already done this in class. _Though admittedly, making *good* game variations -- that are well-balanced, strategically interesting, with good replay value_ can take expertise or luck and play-testing with revisions.  Such balanced elegance is desirable but might not be achievable here, given the short time you have.)
+2.`def find_solutions(self) -> int:`
 
-1. Devise your own new _original_ type of logic puzzle or an _original variation_ of existing puzzle type. Like with previous homework, your program should be able to randomly generate new puzzles of your type and automatically verify that all puzzles generated comply with the standard meta-rule that only one valid solution exists. It needs to output the _unsolved_ puzzles in a way that a human can print or view them conveniently to try solving them and to somehow output (to file?) or display the solution for each puzzle when requested, so as not to spoil the challenge. An interactive UI to "play" the puzzles interactively is very nice but *not* required. 
+- Finds the number of solution(s) of the puzzle, breaks when over 1
+- Places a valid move to the grid, if no more valid shapes to place, backtrack
+- **Time complexity: O(k^(n^2)); k = kinds of shapes, n = size of the grid**
+  - For example, a 4x4 and 5x5 will differ by at most 3^9 = 19683 times
+  - The actual performance will not grow as slow as it would be,
+  for there cannot be all 25 squares or all 25 circles in the grid
+    (We do not need to consider wrong combinations of shapes)
+  - Very sad performance, needs to add some deterministic methods
+  besides applying brute force solving
 
-2. OR develop an AI game player for an _original variation_ of some existing strategy game.  If you do this, it needs to be set up so it can either play computer-vs-computer and/or against human players with a reasonable text or graphical UI. 2B. If two teams want to independently develop AI players for the same type of game variant as each other (but using different algorithms, strategies, and/or data structures) so they can compete, that is okay.  A sub-variation is to enable this game type on our course game server, discuss with the instructor if this is of interest.
+***
+## Performance Measurement
+Comparing the solving speed of 3x3, 4x4, 5x5
+- 3x3 and 4x4 are solved immediately, while
+- 5x5 took half a minute!!
 
-3. OR Computationally 'Solve' a game.  _Background: Some strategic games, especially those of perfect information are known to be "solved". See https://en.wikipedia.org/wiki/Solved_game, which we discussed in class._  Sometimes these proofs are done through mathematical analysis, other times through exhaustive computational verification. If you choose this option, you can either write your own code or modify some existing code that plays a game, to exhaustively analyze a game to attempt to prove if it is "solved" in this way for certain configurations. Changes to rules or conditions of a known solved game can alter this outcome and require reanalysis.
+![performance0.png](img/performance0.png)
 
-
-## Deliverables and other Requirements:
-
-* Have some fun!
-* In your own fork, please replace this README.md file's contents with a good introduction to your own project. 
-* Targeted Algorithm Analysis:  Regardless of which option you choose, you need to _describe the performance characteristics of some critical parts of your program and explain why you chose the data structures and core algorithm(s) you did_. Examples, if you chose Type #1, what's the Big-O, Big-Theta, or Big-Omega run-time complexity of your puzzle solver? Or the puzzle generator? If you're doing Type #2 and using minimax or negamax, what's the complexity of your _heuristic evaluation function_? ...and of the function that finds all legal moves from a game state? 
-* Performance Measurement: Supplement the analysis above with run-time measurements of multiple iterations of the game or puzzles as discussed in class. Sample results from a run-time profiler is a good idea at least as part of the measurements.
-* If your team has more than one student, see that everyone makes substantial git commits. In addition, your README documentation should include a summary of how you shared the work.
-* Live in-class presentation & demonstration of your work.
+More can be found in the [presentation file](doc/IS_597_DS_Project_Presentation_240425.pdf).
+***
+## Future Work
+I hope to create a GUI for this game so players can interact
+with the program. And maybe implementing diffrent puzzle difficulties.
+***
+## Reference
+[Undead from Simon Tatham's Portable Puzzle Collection](www.chiark.greenend.org.uk/~sgtatham/puzzles/js/undead.html)
